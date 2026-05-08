@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidable">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>傅副官的声音</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#F5F0F7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <style>
+    #lock-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(160deg, #FAF6F0 0%, #F5F0F7 35%, #EDE2F0 70%, #E8E1EC 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #lock-screen.hidden { display: none; }
+    .lock-box {
+      background: #FAF6F0; border: 1px solid #E8E1EC; border-radius: 4px;
+      padding: 40px 28px; text-align: center;
+      box-shadow: 0 2px 12px rgba(92,78,110,.06);
+      max-width: 300px; width: 88%;
+    }
+    .lock-box .icon {
+      font-size: 28px; margin-bottom: 12px;
+      color: #5C4E6E; letter-spacing: 0.3em;
+      font-family: 'Noto Serif SC', 'Songti SC', 'Kaiti SC', serif;
+    }
+    .lock-box h2 {
+      font-size: 20px; color: #2B2438; margin-bottom: 6px;
+      font-weight: bold; letter-spacing: 0.25em;
+      font-family: 'Noto Serif SC', 'Songti SC', 'Kaiti SC', serif;
+    }
+    .lock-box .hint {
+      font-size: 14px; color: #5C4E6E; margin-bottom: 24px;
+      font-family: 'Noto Serif SC', 'Songti SC', 'Kaiti SC', serif;
+      letter-spacing: 0.1em;
+    }
+    .lock-box input[type="email"],
+    .lock-box input[type="password"] {
+      width: 100%; padding: 12px; border: 1px solid #D9C9E0; border-radius: 4px;
+      font-size: 16px; text-align: center; outline: none; background: #F5F0F7; color: #2B2438;
+      font-family: 'Noto Serif SC', 'Songti SC', 'Kaiti SC', serif;
+    }
+    .lock-box input:focus { border-color: #A896B8; box-shadow: 0 0 0 2px rgba(168,150,184,.12); }
+    .lock-box button {
+      width: 100%; margin-top: 14px; padding: 12px;
+      background: rgba(92,78,110,0.82); color: #F5F0F7;
+      border: none; border-radius: 4px; font-size: 16px; font-weight: bold;
+      cursor: pointer; box-shadow: 0 2px 8px rgba(92,78,110,.15);
+      font-family: 'Noto Serif SC', 'Songti SC', 'Kaiti SC', serif;
+      letter-spacing: 0.2em;
+    }
+    .lock-box button:active { background: rgba(61,52,80,0.88); }
+    .lock-error { color: #A64B4B; font-size: 13px; margin-top: 8px; display: none;
+      font-family: 'Noto Serif SC', 'Songti SC', 'Kaiti SC', serif; }
+  </style>
+</head>
+<body>
+
+  <!-- 锁屏 -->
+  <div id="lock-screen">
+    <div class="lock-box">
+      <div class="icon">傅</div>
+      <h2>傅副官的声音</h2>
+      <div class="hint">念给你听</div>
+      <input type="email" id="lock-email" placeholder="邮箱" autofocus>
+      <input type="password" id="lock-pw" placeholder="密码" style="margin-top:10px">
+      <button id="lock-btn">开门</button>
+      <div class="lock-error" id="lock-error">不对，再想想？</div>
+    </div>
+  </div>
+
+  <!-- 主界面 -->
+  <div id="app" class="hidden">
+    <header class="app-header">
+      <h1>傅副官的声音</h1>
+    </header>
+
+    <main class="app-main">
+      <!-- 输入区 -->
+      <section class="card input-card">
+        <div class="section-label">输入文字</div>
+        <div class="input-tabs">
+          <button class="input-tab active" data-mode="paste">粘贴文字</button>
+          <button class="input-tab" data-mode="file">上传文件</button>
+        </div>
+        <div id="paste-area">
+          <textarea id="text-input" rows="8" placeholder="把想让傅副官读的文字贴在这里..."></textarea>
+          <div class="char-count"><span id="char-count">0</span> 字</div>
+        </div>
+        <div id="file-area" class="hidden">
+          <label class="file-drop" id="file-drop">
+            <input type="file" id="file-input" accept=".txt,.md,.text" hidden>
+            <div class="file-drop-text">
+              <span class="file-icon">&#128196;</span>
+              <span>点击选择或拖入 txt 文件</span>
+            </div>
+          </label>
+          <div id="file-info" class="file-info hidden">
+            <span id="file-name"></span>
+            <button id="file-clear" class="btn-clear">清除</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 参数区 -->
+      <section class="card param-card">
+        <div class="section-label">语音参数</div>
+        <div class="param-row">
+          <label>语速</label>
+          <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
+          <span class="param-val" id="speed-val">1.0x</span>
+        </div>
+        <div class="param-row">
+          <label>音调</label>
+          <input type="range" id="pitch" min="-12" max="12" step="1" value="0">
+          <span class="param-val" id="pitch-val">0</span>
+        </div>
+      </section>
+
+      <!-- 生成按钮 -->
+      <button class="btn-generate" id="btn-generate" disabled>
+        <span class="btn-text">生成语音</span>
+        <span class="btn-loading hidden">生成中...</span>
+      </button>
+
+      <!-- 播放区 -->
+      <section class="card player-card hidden" id="player-card">
+        <div class="section-label">播放</div>
+        <div class="player">
+          <button class="play-btn" id="play-btn">&#9654;</button>
+          <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-bar" id="progress-bar"></div>
+          </div>
+          <span class="time" id="time-display">0:00 / 0:00</span>
+        </div>
+        <div class="player-actions">
+          <button class="btn-secondary" id="btn-download">下载 MP3</button>
+          <button class="btn-secondary" id="btn-again">重新生成</button>
+        </div>
+      </section>
+
+      <!-- 历史记录 -->
+      <section class="card history-card" id="history-card">
+        <div class="section-label-row">
+          <div class="section-label">历史记录</div>
+          <button class="btn-clear-all hidden" id="btn-clear-history">清空</button>
+        </div>
+        <div id="history-list" class="history-list">
+          <div class="empty-hint">还没有生成过语音</div>
+        </div>
+      </section>
+
+      <!-- 设置区 -->
+      <section class="card settings-card">
+        <button class="settings-toggle" id="settings-toggle">
+          <span>API 设置</span>
+          <span class="arrow" id="settings-arrow">&#9662;</span>
+        </button>
+        <div class="settings-body hidden" id="settings-body">
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="api-key" placeholder="输入 MiniMax API Key">
+          </div>
+          <div class="form-group">
+            <label>Group ID</label>
+            <input type="text" id="group-id" placeholder="输入 Group ID">
+          </div>
+          <div class="form-group">
+            <label>Voice ID</label>
+            <input type="text" id="voice-id" placeholder="输入 Voice ID">
+          </div>
+          <button class="btn-primary" id="btn-save-settings">保存设置</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <audio id="audio" preload="auto"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function() {
+    var SB_URL = 'https://otpcdlgwlaifirhfnnat.supabase.co';
+    var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90cGNkbGd3bGFpZmlyaGZubmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4ODQ5NzQsImV4cCI6MjA5MTQ2MDk3NH0.nC92brW3QJPbkh9IQ8q3-S6W-Mw8WLtcKXoIJ-8xkHo';
+    var authClient = window.supabase.createClient(SB_URL, SB_KEY);
+
+    document.getElementById('app').classList.add('hidden');
+
+    authClient.auth.getSession().then(function(res) {
+      if (res.data.session) {
+        document.getElementById('lock-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+      }
+    });
+
+    async function tryLogin() {
+      var email = document.getElementById('lock-email').value.trim();
+      var pw = document.getElementById('lock-pw').value;
+      var btn = document.getElementById('lock-btn');
+      btn.disabled = true;
+      btn.textContent = '登录中...';
+      var { error } = await authClient.auth.signInWithPassword({ email: email, password: pw });
+      btn.disabled = false;
+      btn.textContent = '开门';
+      if (error) {
+        document.getElementById('lock-error').style.display = 'block';
+      } else {
+        document.getElementById('lock-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+      }
+    }
+    document.getElementById('lock-btn').addEventListener('click', tryLogin);
+    document.getElementById('lock-pw').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') tryLogin();
+    });
+  })();
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
