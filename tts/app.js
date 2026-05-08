@@ -109,6 +109,18 @@
   const voiceIdInput = document.getElementById('voice-id');
   const btnSaveSettings = document.getElementById('btn-save-settings');
 
+  const DEFAULTS = {
+    key: 'sk-api-uLFf50ZWsgVKOruyDgepYwFGWVGyvwwTrObS5XiF6JdY7Qyr_rxgOC1267sT9kyqyMlLKbScYfacFWlwqASq0aam1OLA2mO9Yn-dvvJ3n5wrM1vb57NtbQA',
+    group: '2039740218591944732',
+    voice: 'moss_audio_97acfc72-2ea7-11f1-92d8-d6be2e254d77'
+  };
+
+  if (!localStorage.getItem('tts_api_key')) {
+    localStorage.setItem('tts_api_key', DEFAULTS.key);
+    localStorage.setItem('tts_group_id', DEFAULTS.group);
+    localStorage.setItem('tts_voice_id', DEFAULTS.voice);
+  }
+
   apiKeyInput.value = localStorage.getItem('tts_api_key') || '';
   groupIdInput.value = localStorage.getItem('tts_group_id') || '';
   voiceIdInput.value = localStorage.getItem('tts_voice_id') || '';
