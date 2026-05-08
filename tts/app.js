@@ -115,10 +115,12 @@
     voice: 'moss_audio_97acfc72-2ea7-11f1-92d8-d6be2e254d77'
   };
 
-  if (!localStorage.getItem('tts_api_key')) {
+  // v2: 强制用正确的默认值覆盖，修复之前手动粘贴可能带入的问题
+  if (localStorage.getItem('tts_settings_v') !== '2') {
     localStorage.setItem('tts_api_key', DEFAULTS.key);
     localStorage.setItem('tts_group_id', DEFAULTS.group);
     localStorage.setItem('tts_voice_id', DEFAULTS.voice);
+    localStorage.setItem('tts_settings_v', '2');
   }
 
   apiKeyInput.value = localStorage.getItem('tts_api_key') || '';
@@ -166,9 +168,9 @@
     const text = getCurrentText();
     if (!text) return;
 
-    const apiKey = localStorage.getItem('tts_api_key');
-    const groupId = localStorage.getItem('tts_group_id');
-    const voiceId = localStorage.getItem('tts_voice_id');
+    const apiKey = (localStorage.getItem('tts_api_key') || '').trim();
+    const groupId = (localStorage.getItem('tts_group_id') || '').trim();
+    const voiceId = (localStorage.getItem('tts_voice_id') || '').trim();
     if (!apiKey || !groupId || !voiceId) {
       showToast('请先填写 API 设置');
       return;
