@@ -528,6 +528,9 @@ function setupModal() {
   };
   document.getElementById('form-save').onclick = saveForm;
   document.getElementById('form-delete').onclick = deleteReminder;
+  document.getElementById('form-clear-datetime').onclick = () => {
+    document.getElementById('form-remind-datetime').value = '';
+  };
 
   document.getElementById('form-recurrence-select').onchange = () => {
     const val = document.getElementById('form-recurrence-select').value;

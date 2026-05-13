@@ -383,6 +383,15 @@ input[type="time"].form-list-input {
   appearance: auto;
 }
 
+.form-clear-btn {
+  border: none; background: transparent;
+  color: var(--ink); font-size: 13px;
+  padding: 4px 8px; margin-left: 6px;
+  cursor: pointer; opacity: 0.55;
+  font-family: inherit; flex-shrink: 0;
+}
+.form-clear-btn:hover { opacity: 1; }
+
 /* Buttons */
 .btn-save {
   padding: 10px 28px; border: none; border-radius: var(--radius);
