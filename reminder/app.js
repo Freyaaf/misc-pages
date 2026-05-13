@@ -499,8 +499,7 @@ function openAdd() {
   document.getElementById('modal-title').textContent = '添加待办';
   document.getElementById('form-title').value = '';
   document.getElementById('form-notes').value = '';
-  document.getElementById('form-remind-date').value = '';
-  document.getElementById('form-remind-time').value = '';
+  document.getElementById('form-remind-datetime').value = '';
   document.getElementById('form-recurrence-select').value = '';
   document.getElementById('form-weekday-select').value = '1';
   document.getElementById('form-priority-select').value = '0';
@@ -523,16 +522,11 @@ function openEdit(id) {
   document.getElementById('form-delete').classList.remove('hidden');
 
   if (r.remind_at) {
-    const d = new Date(r.remind_at);
-    document.getElementById('form-remind-date').value = dateStr(d);
-    document.getElementById('form-remind-time').value = timeStr(d);
+    document.getElementById('form-remind-datetime').value = datetimeStr(new Date(r.remind_at));
   } else if (r.due_date) {
-    const d = new Date(r.due_date);
-    document.getElementById('form-remind-date').value = dateStr(d);
-    document.getElementById('form-remind-time').value = timeStr(d);
+    document.getElementById('form-remind-datetime').value = datetimeStr(new Date(r.due_date));
   } else {
-    document.getElementById('form-remind-date').value = '';
-    document.getElementById('form-remind-time').value = '';
+    document.getElementById('form-remind-datetime').value = '';
   }
 
   document.getElementById('form-recurrence-select').value = r.recurrence_rule || '';
@@ -621,13 +615,13 @@ async function saveForm() {
   const priority = parseInt(document.getElementById('form-priority-select').value || '0');
   const notes = document.getElementById('form-notes').value.trim() || null;
 
-  const remindDate = document.getElementById('form-remind-date').value;
-  const remindTime = document.getElementById('form-remind-time').value;
+  const remindDatetime = document.getElementById('form-remind-datetime').value;
 
   let remind_at = null;
   let due_date = null;
-  if (remindDate) {
-    remind_at = new Date(remindDate + 'T' + (remindTime || '09:00') + ':00+08:00').toISOString();
+  if (remindDatetime) {
+    // datetime-local 返回 "YYYY-MM-DDTHH:MM"，按北京时间解释
+    remind_at = new Date(remindDatetime + ':00+08:00').toISOString();
     due_date = remind_at;
   }
 
@@ -714,6 +708,9 @@ function dateStr(d) {
 }
 function timeStr(d) {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function datetimeStr(d) {
+  return `${dateStr(d)}T${timeStr(d)}`;
 }
 function escHtml(s) {
   const d = document.createElement('div');
