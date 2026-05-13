@@ -21,9 +21,16 @@ async function notifySync(action, id, appleId) {
   const msg = action === 'delete' && appleId
     ? `reminder-sync:delete:${appleId}`
     : `reminder-sync:${action}:${id}`;
-  try {
-    await fetch('https://ntfy.sh/furong-reminder-sync', { method: 'POST', body: msg });
-  } catch (e) { console.warn('ntfy:', e); }
+  // ntfy.sh 偶尔抽风，最多重试 3 次，间隔指数退避
+  for (let i = 0; i < 3; i++) {
+    try {
+      const resp = await fetch('https://ntfy.sh/furong-reminder-sync', { method: 'POST', body: msg });
+      if (resp.ok) return;
+    } catch (e) {
+      if (i === 2) console.warn('ntfy 3次重试失败:', e);
+    }
+    await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)));
+  }
 }
 
 // ===== Auth =====
@@ -117,13 +124,38 @@ async function quickAdd() {
 
 // ===== Data =====
 async function loadReminders() {
-  const { data, error } = await sb.from('reminders')
+  // 未完成全拉
+  const undoneQ = sb.from('reminders')
     .select('*')
+    .eq('completed', false)
     .order('sort_order', { ascending: true, nullsFirst: true })
     .order('due_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
-  if (error) { console.error(error); return; }
-  allReminders = data || [];
+
+  // 已完成按 donePeriod 范围拉
+  let doneQ;
+  if (state.donePeriod === 'all') {
+    doneQ = sb.from('reminders')
+      .select('*')
+      .eq('completed', true)
+      .order('completion_date', { ascending: false, nullsFirst: false })
+      .limit(500);
+  } else {
+    const days = { week: 7, month: 30, '3month': 90, year: 365 }[state.donePeriod] || 30;
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+    doneQ = sb.from('reminders')
+      .select('*')
+      .eq('completed', true)
+      .or(`completion_date.gte.${cutoff},updated_at.gte.${cutoff}`)
+      .order('completion_date', { ascending: false, nullsFirst: false });
+  }
+
+  const [undoneRes, doneRes] = await Promise.all([undoneQ, doneQ]);
+  if (undoneRes.error || doneRes.error) {
+    console.error(undoneRes.error || doneRes.error);
+    return;
+  }
+  allReminders = [...(undoneRes.data || []), ...(doneRes.data || [])];
 
   const cats = new Set(DEFAULT_CATEGORIES);
   allReminders.forEach(r => { if (r.category) cats.add(r.category); });
@@ -416,6 +448,7 @@ async function toggleSubtask(reminderId, subtaskId) {
   );
   r.subtasks = subtasks;
   await sb.from('reminders').update({ subtasks, synced_to_apple: false }).eq('id', reminderId);
+  notifySync('update', reminderId);
   render();
 }
 
@@ -462,12 +495,21 @@ function calcNextDue(r) {
   if (!r.due_date) return null;
   const d = new Date(r.due_date);
   const interval = r.recurrence_interval || 1;
-  switch (r.recurrence_rule) {
-    case 'daily': d.setDate(d.getDate() + interval); break;
-    case 'weekly': d.setDate(d.getDate() + 7 * interval); break;
-    case 'monthly': d.setMonth(d.getMonth() + interval); break;
-    case 'yearly': d.setFullYear(d.getFullYear() + interval); break;
-    default: return null;
+  const now = new Date();
+  // 滚动到第一个 > now 的下次时间，避免过期多个周期时下一次还是过期
+  const advance = () => {
+    switch (r.recurrence_rule) {
+      case 'daily': d.setDate(d.getDate() + interval); return true;
+      case 'weekly': d.setDate(d.getDate() + 7 * interval); return true;
+      case 'monthly': d.setMonth(d.getMonth() + interval); return true;
+      case 'yearly': d.setFullYear(d.getFullYear() + interval); return true;
+      default: return false;
+    }
+  };
+  if (!advance()) return null;
+  let safety = 0;
+  while (d <= now && safety++ < 1000) {
+    if (!advance()) break;
   }
   return d;
 }
@@ -680,8 +722,9 @@ async function deleteReminder() {
 
 // ===== Done Filter =====
 function setupDoneFilter() {
-  document.getElementById('done-filter-period').onchange = e => {
+  document.getElementById('done-filter-period').onchange = async e => {
     state.donePeriod = e.target.value;
+    await loadReminders();
     render();
   };
 }
