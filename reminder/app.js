@@ -499,7 +499,10 @@ function openAdd() {
   document.getElementById('modal-title').textContent = '添加待办';
   document.getElementById('form-title').value = '';
   document.getElementById('form-notes').value = '';
-  document.getElementById('form-remind-datetime').value = '';
+  // 预填默认时间为下一小时整点，避免占位文字让用户误以为已选
+  const now = new Date();
+  now.setHours(now.getHours() + 1, 0, 0, 0);
+  document.getElementById('form-remind-datetime').value = datetimeStr(now);
   document.getElementById('form-recurrence-select').value = '';
   document.getElementById('form-weekday-select').value = '1';
   document.getElementById('form-priority-select').value = '0';
