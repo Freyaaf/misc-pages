@@ -85,7 +85,9 @@ function saveLocal(date, data) {
 
 async function initSupabase() {
   try {
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { storage: sessionStorage, storageKey: 'sb-auth' }
+    });
     const { data, error } = await sb.from('daily_checkins').select('id').limit(1);
     if (!error) useSupabase = true;
   } catch {}

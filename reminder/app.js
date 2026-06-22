@@ -1,6 +1,8 @@
 const SUPABASE_URL = 'https://otpcdlgwlaifirhfnnat.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90cGNkbGd3bGFpZmlyaGZubmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4ODQ5NzQsImV4cCI6MjA5MTQ2MDk3NH0.nC92brW3QJPbkh9IQ8q3-S6W-Mw8WLtcKXoIJ-8xkHo';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storage: sessionStorage, storageKey: 'sb-auth' }
+});
 
 const DEFAULT_CATEGORIES = ['全部', '日常', '学习', '工作', '财务', '生活'];
 const RECURRENCE_LABELS = { daily: '每天', weekly: '每周', monthly: '每月', yearly: '每年' };
