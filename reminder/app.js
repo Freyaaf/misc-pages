@@ -19,10 +19,9 @@ let state = {
 
 let allReminders = [];
 
-async function notifySync(action, id, appleId) {
-  const msg = action === 'delete' && appleId
-    ? `reminder-sync:delete:${appleId}`
-    : `reminder-sync:${action}:${id}`;
+async function notifySync() {
+  // ntfy 只是无权限的“门铃”；真正操作由 Mac 从认证数据库任务队列读取。
+  const msg = 'reminder-sync:wake';
   // ntfy.sh 偶尔抽风，最多重试 3 次，间隔指数退避
   for (let i = 0; i < 3; i++) {
     try {
@@ -71,6 +70,7 @@ async function init() {
   setupModal();
   setupDoneFilter();
   await loadReminders();
+  setupRealtime();
   renderCategoryBar();
   render();
   updateNotifBtn();
@@ -116,6 +116,7 @@ async function quickAdd() {
     category: cat,
     source: 'web',
     synced_to_apple: false,
+    last_writer: 'web',
   }).select('id').single();
   if (error) { toast('添加失败'); return; }
   toast('已添加');
@@ -130,6 +131,7 @@ async function loadReminders() {
   const undoneQ = sb.from('reminders')
     .select('*')
     .eq('completed', false)
+    .is('deleted_at', null)
     .order('sort_order', { ascending: true, nullsFirst: true })
     .order('due_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
@@ -140,6 +142,7 @@ async function loadReminders() {
     doneQ = sb.from('reminders')
       .select('*')
       .eq('completed', true)
+      .is('deleted_at', null)
       .order('completion_date', { ascending: false, nullsFirst: false })
       .limit(500);
   } else {
@@ -148,6 +151,7 @@ async function loadReminders() {
     doneQ = sb.from('reminders')
       .select('*')
       .eq('completed', true)
+      .is('deleted_at', null)
       .or(`completion_date.gte.${cutoff},updated_at.gte.${cutoff}`)
       .order('completion_date', { ascending: false, nullsFirst: false });
   }
@@ -162,6 +166,20 @@ async function loadReminders() {
   const cats = new Set(DEFAULT_CATEGORIES);
   allReminders.forEach(r => { if (r.category) cats.add(r.category); });
   state.categories = Array.from(cats);
+}
+
+let realtimeReloadTimer = null;
+function setupRealtime() {
+  sb.channel('reminders-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, () => {
+      clearTimeout(realtimeReloadTimer);
+      realtimeReloadTimer = setTimeout(async () => {
+        await loadReminders();
+        renderCategoryBar();
+        render();
+      }, 250);
+    })
+    .subscribe();
 }
 
 function getFiltered(completed) {
@@ -383,6 +401,11 @@ function renderItem(r, isDone) {
     const pc = r.priority >= 9 ? 'p-high' : r.priority >= 5 ? 'p-mid' : 'p-low';
     meta += `<span class="meta-tag meta-priority ${pc}">${PRIORITY_LABELS[r.priority] || ''}</span>`;
   }
+  if (r.apple_sync_state === 'pending' || r.apple_sync_state === 'processing') {
+    meta += '<span class="meta-tag meta-sync pending">等待 Apple</span>';
+  } else if (r.apple_sync_state === 'failed' || r.apple_sync_state === 'conflict') {
+    meta += '<span class="meta-tag meta-sync failed">同步待处理</span>';
+  }
   // 子任务进度
   const subtasks = r.subtasks || [];
   if (subtasks.length > 0) {
@@ -449,7 +472,7 @@ async function toggleSubtask(reminderId, subtaskId) {
     st.id === subtaskId ? { ...st, completed: !st.completed } : st
   );
   r.subtasks = subtasks;
-  await sb.from('reminders').update({ subtasks, synced_to_apple: false }).eq('id', reminderId);
+  await sb.from('reminders').update({ subtasks, synced_to_apple: false, last_writer: 'web' }).eq('id', reminderId);
   notifySync('update', reminderId);
   render();
 }
@@ -464,6 +487,7 @@ async function toggleComplete(id) {
     completed: newCompleted,
     completion_date: newCompleted ? new Date().toISOString() : null,
     synced_to_apple: false,
+    last_writer: 'web',
   };
 
   if (newCompleted && r.recurrence_rule) {
@@ -481,6 +505,7 @@ async function toggleComplete(id) {
         recurrence_weekday: r.recurrence_weekday,
         source: 'web',
         synced_to_apple: false,
+        last_writer: 'web',
       }).select('id').single();
       if (newR) notifySync('insert', newR.id);
     }
@@ -690,6 +715,7 @@ async function saveForm() {
     subtasks: subtasks.length > 0 ? subtasks : null,
     notified: false,
     synced_to_apple: false,
+    last_writer: 'web',
   };
 
   let error, savedId;
@@ -715,10 +741,15 @@ async function saveForm() {
 async function deleteReminder() {
   if (!state.editingId) return;
   if (!confirm('确定删除这条待办？')) return;
-  const r = allReminders.find(x => x.id === state.editingId);
-  const appleId = r?.apple_reminder_id || '';
-  await sb.from('reminders').delete().eq('id', state.editingId);
-  notifySync('delete', state.editingId, appleId);
+  const { error } = await sb.from('reminders').update({
+    deleted_at: new Date().toISOString(),
+    completed: true,
+    completion_date: new Date().toISOString(),
+    synced_to_apple: false,
+    last_writer: 'web',
+  }).eq('id', state.editingId);
+  if (error) { toast('删除失败'); console.error(error); return; }
+  notifySync();
   toast('已删除');
   closeModal();
   await loadReminders();

@@ -207,6 +207,14 @@ html, body {
 .meta-priority.p-high { color: var(--danger); }
 .meta-priority.p-mid { color: var(--indigo); }
 .meta-priority.p-low { color: var(--smoke); }
+.meta-sync.pending {
+  color: var(--snow-grey); background: rgba(142,122,168,0.08);
+  border: 1px dashed var(--lilac);
+}
+.meta-sync.failed {
+  color: var(--danger); background: var(--danger-light);
+  border: 1px solid rgba(179,91,91,0.35);
+}
 .meta-notes {
   font-size: 12px; color: var(--snow-grey);
   margin-top: 2px; line-height: 1.4;
