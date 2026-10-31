@@ -396,6 +396,10 @@ html, body {
 }
 .bill-detail.open { display: block; }
 .bill-detail .reason { margin-bottom: 6px; }
+.multiline-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .bill-detail .follow-up {
   background: rgba(201,184,212,0.10); padding: 8px 10px;
   border-radius: 2px; margin-top: 6px;

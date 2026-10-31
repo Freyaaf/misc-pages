@@ -644,9 +644,9 @@ function bindBillItemEvents(container) {
   });
 
   container.querySelectorAll('.btn-follow-up').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', async e => {
       e.stopPropagation();
-      openFollowUpModal(btn.dataset.id, btn.dataset.existing || '');
+      await openFollowUpModal(btn.dataset.id);
     });
   });
 
@@ -685,13 +685,13 @@ function renderBillItem(b) {
       <div class="bill-amount" style="${isIncome ? 'color:#2A9D5C' : ''}">${isIncome ? '+' : ''}¥${parseFloat(b.amount).toFixed(2)}</div>
     </div>
     <div class="bill-detail">
-      ${b.reason ? `<div class="reason">${esc(b.reason)}</div>` : ''}
+      ${b.reason ? `<div class="reason multiline-text">${esc(b.reason)}</div>` : ''}
       ${hasFollowUp ? `<div class="follow-up">
         <div class="follow-up-label">追评 · ${b.follow_up_date ? formatDate(b.follow_up_date) : ''}</div>
-        <div>${esc(b.follow_up)}</div>
+        <div class="follow-up-text multiline-text">${esc(b.follow_up)}</div>
       </div>` : ''}
       <div class="bill-actions">
-        <button class="btn-secondary btn-follow-up" data-id="${b.id}" data-existing="${esc(b.follow_up || '')}">${hasFollowUp ? '修改追评' : '写追评'}</button>
+        <button class="btn-secondary btn-follow-up" data-id="${b.id}">${hasFollowUp ? '修改追评' : '写追评'}</button>
         <button class="btn-secondary btn-edit" data-id="${b.id}">编辑</button>
         <button class="btn-danger btn-delete" data-id="${b.id}">删除</button>
       </div>
@@ -707,11 +707,17 @@ function esc(s) {
 }
 
 // ===== Follow Up Modal =====
-function openFollowUpModal(id, existing) {
+async function openFollowUpModal(id) {
+  const { data: bill, error } = await sb.from('bills').select('follow_up').eq('id', id).single();
+  if (error || !bill) {
+    toast('找不到记录');
+    return;
+  }
+  const existing = bill.follow_up || '';
   openModal(`
     <h3>写追评</h3>
     <div class="form-group">
-      <textarea id="follow-up-text" rows="3" placeholder="用了之后觉得怎么样？">${existing}</textarea>
+      <textarea id="follow-up-text" rows="3" placeholder="用了之后觉得怎么样？">${esc(existing)}</textarea>
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal()">取消</button>
